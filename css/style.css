@@ -226,7 +226,9 @@ tbody tr:hover { background: var(--chalk); }
   #menuToggle { display: none; }
 }
 @media (max-width: 480px) {
-  .site-header .brand span.txt { display: none; }
+  .site-header .container { flex-wrap: wrap; gap: 8px; }
+  .site-header .brand { font-size: 16px; }
+  .site-header nav a { font-size: 13px; }
   .container { padding: 0 14px; }
   .codigo-box .codigo { font-size: 26px; }
 }

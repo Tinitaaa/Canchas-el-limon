@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CanchaYa – Panel administrador</title>
+<title>Canchitas El Limón - Panel administrador</title>
+<meta name="robots" content="noindex, nofollow">
 <link rel="stylesheet" href="css/style.css">
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
@@ -14,14 +15,13 @@
 <!-- ================= LOGIN ================= -->
 <div class="login-wrap" id="loginWrap">
   <div class="login-card">
-    <div class="brand" style="color:var(--pitch-900); margin-bottom:18px;"><span class="brand-mark">⚽</span> CanchaYa Admin</div>
+    <div class="brand" style="color:var(--pitch-900); margin-bottom:18px;"><span class="brand-mark">⚽</span> Canchitas El Limón</div>
     <form id="formLogin">
       <label>Usuario</label>
       <input type="text" id="loginUser" autocomplete="username">
       <label>Contraseña</label>
       <input type="password" id="loginPass" autocomplete="current-password">
       <button class="btn btn-primary btn-block" style="margin-top:18px;">Ingresar</button>
-      <div class="hint">Demo: usuario <b>admin</b> / clave <b>admin123</b></div>
     </form>
   </div>
 </div>
@@ -34,9 +34,9 @@
 <!-- ================= PANEL ================= -->
 <div class="admin-shell" id="panel" style="display:none;">
   <aside class="admin-sidebar" id="sidebar">
-    <div class="brand">⚽ CanchaYa</div>
+    <div class="brand">⚽ Canchitas El Limón</div>
     <nav class="admin-nav" id="adminNav">
-      <button data-view="dashboard">📊 Dashboard</button>
+      <button data-view="dashboard">📊 Principal</button>
       <button data-view="calendario">🗓️ Calendario semanal</button>
       <button data-view="reservas">📋 Reservas</button>
       <button data-view="clientes">👤 Clientes</button>
@@ -52,7 +52,7 @@
     <div class="admin-topbar">
       <div style="display:flex; align-items:center; gap:10px;">
         <button id="menuToggle" class="btn btn-ghost btn-sm">☰</button>
-        <h2 id="viewTitle">Dashboard</h2>
+        <h2 id="viewTitle">Principal</h2>
       </div>
       <a href="index.html" class="btn btn-ghost btn-sm">Ver sitio de clientes</a>
     </div>

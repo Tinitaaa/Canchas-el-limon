@@ -36,7 +36,7 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => (
 const $ = id => document.getElementById(id);
 
 const TITULOS = {
-  dashboard: 'Dashboard', calendario: 'Calendario semanal', reservas: 'Reservas',
+  dashboard: 'Principal', calendario: 'Calendario semanal', reservas: 'Reservas',
   clientes: 'Clientes', equipos: 'Equipos', canchas: 'Canchas', horarios: 'Horarios',
   estadisticas: 'Estadisticas'
 };
@@ -158,7 +158,7 @@ function aplicarEstado(st, { restaurarScroll = false } = {}) {
 function renderActual({ animar = true } = {}) {
   const cont = $('viewContent');
   $('viewTitle').textContent = etiquetaPantalla();
-  document.title = etiquetaPantalla() + ' - CanchaYa Admin';
+  document.title = etiquetaPantalla() + ' - Canchitas El Limón';
   try {
     if (subVista) SUBVISTAS[vistaActual][subVista](paramsVista);
     else SECCIONES[vistaActual]();
