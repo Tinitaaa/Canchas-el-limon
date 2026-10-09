@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CanchaYa – Reservá tu cancha</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container">
+    <div class="brand"><span class="brand-mark">⚽</span><span class="txt">CanchaYa</span></div>
+    <nav>
+      <a href="#" id="navConsultar">Consultar mi reserva</a>
+      &nbsp;&nbsp;
+      <a href="admin.html">Panel administrador</a>
+    </nav>
+  </div>
+</header>
+
+<main class="container" style="padding-bottom:60px;">
+
+  <!-- ================= FLUJO DE RESERVA ================= -->
+  <section id="flujoReserva">
+    <h1 style="margin-top:24px;">Reservá tu cancha en 5 minutos</h1>
+    <p style="color:var(--ink-soft)">Elegí fecha, cancha y horario disponible. Confirmación al instante.</p>
+
+    <div class="stepper" id="stepper"></div>
+
+    <!-- Paso 1: fecha -->
+    <div class="card" id="paso1">
+      <h3>1. Elegí una fecha</h3>
+      <div class="fecha-picker" id="fechaPicker"></div>
+      <label for="fechaManual">O elegí otra fecha</label>
+      <input type="date" id="fechaManual">
+    </div>
+
+    <!-- Paso 2: cancha -->
+    <div class="card" id="paso2" style="display:none;">
+      <h3>2. Elegí una cancha</h3>
+      <div class="canchas-grid" id="canchasGrid"></div>
+    </div>
+
+    <!-- Paso 3: horario -->
+    <div class="card" id="paso3" style="display:none;">
+      <h3>3. Elegí un horario</h3>
+      <div class="horarios-grid" id="horariosGrid"></div>
+    </div>
+
+    <!-- Paso 4: datos -->
+    <div class="card" id="paso4" style="display:none;">
+      <h3>4. Tus datos</h3>
+      <form id="formDatos">
+        <div class="field-row">
+          <div><label>Nombre y apellido *</label><input type="text" id="inNombre" required></div>
+          <div><label>Teléfono *</label><input type="tel" id="inTelefono" placeholder="Ej: 2611234567" required></div>
+        </div>
+        <div class="field-row">
+          <div><label>Cantidad de jugadores</label><input type="number" id="inJugadores" min="1" placeholder="Ej: 10"></div>
+          <div><label>Cantidad de equipos</label><input type="number" id="inEquiposCant" min="1" value="2"></div>
+        </div>
+        <label>Nombre del equipo</label>
+        <input type="text" id="inEquipo" placeholder="Ej: Los Pibes">
+        <label>Observaciones</label>
+        <textarea id="inObs" placeholder="Alguna aclaración para el administrador..."></textarea>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+          <button type="button" class="btn btn-ghost" onclick="irAPaso(3)">Atrás</button>
+          <button type="submit" class="btn btn-primary btn-block">Ver resumen</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Paso 5: resumen -->
+    <div class="card" id="paso5" style="display:none;">
+      <h3>5. Confirmá tu reserva</h3>
+      <div id="resumenBox"></div>
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button type="button" class="btn btn-ghost" onclick="irAPaso(4)">Atrás</button>
+        <button type="button" class="btn btn-accent btn-block" id="btnConfirmar">Confirmar reserva</button>
+      </div>
+    </div>
+
+    <!-- Paso 6: código -->
+    <div class="card" id="paso6" style="display:none;">
+      <div class="codigo-box">
+        <div>¡Reserva confirmada!</div>
+        <div class="codigo" id="codigoGenerado">#000000</div>
+        <div style="font-size:13px; margin-top:8px; color:var(--pitch-300);">Guardá este código para consultar tu turno</div>
+      </div>
+      <div id="resumenFinal" style="margin-top:16px;"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="location.reload()">Hacer otra reserva</button>
+    </div>
+  </section>
+
+  <!-- ================= CONSULTAR RESERVA ================= -->
+  <section id="consultaReserva" style="display:none;">
+    <h1 style="margin-top:24px;">Consultar mi reserva</h1>
+    <div class="card">
+      <label>Código de reserva</label>
+      <input type="text" id="inCodigoConsulta" placeholder="Ej: #000101">
+      <button class="btn btn-primary" style="margin-top:14px;" onclick="buscarReserva()">Buscar</button>
+      <div id="resultadoConsulta" style="margin-top:18px;"></div>
+    </div>
+    <p><a href="#" onclick="mostrarFlujo(); return false;">&larr; Volver a reservar</a></p>
+  </section>
+
+</main>
+
+<footer class="site-footer">CanchaYa · Sistema de reservas de canchas de fútbol</footer>
+
+<script src="js/db.js"></script>
+<script src="js/client.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CanchaYa – Panel administrador</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <div class="brand" style="color:var(--pitch-900); margin-bottom:18px;"><span class="brand-mark">⚽</span> CanchaYa Admin</div>
+    <form id="formLogin">
+      <label>Usuario</label>
+      <input type="text" id="loginUser" autocomplete="username">
+      <label>Contraseña</label>
+      <input type="password" id="loginPass" autocomplete="current-password">
+      <button class="btn btn-primary btn-block" style="margin-top:18px;">Ingresar</button>
+      <div class="hint">Demo: usuario <b>admin</b> / clave <b>admin123</b></div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= CARGANDO (aparte del login para no pisar el formulario) ================= -->
+<div class="login-wrap" id="cargandoWrap" style="display:none;">
+  <div class="login-card" style="text-align:center;">Cargando datos...</div>
+</div>
+
+<!-- ================= PANEL ================= -->
+<div class="admin-shell" id="panel" style="display:none;">
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="brand">⚽ CanchaYa</div>
+    <nav class="admin-nav" id="adminNav">
+      <button data-view="dashboard">📊 Dashboard</button>
+      <button data-view="calendario">🗓️ Calendario semanal</button>
+      <button data-view="reservas">📋 Reservas</button>
+      <button data-view="clientes">👤 Clientes</button>
+      <button data-view="equipos">🏳️ Equipos</button>
+      <button data-view="canchas">🏟️ Canchas</button>
+      <button data-view="horarios">⏰ Horarios</button>
+      <button data-view="estadisticas">📈 Estadísticas</button>
+    </nav>
+    <button class="btn btn-ghost btn-sm" style="color:var(--chalk); border-color:rgba(255,255,255,.25); margin-top:10px;" id="btnLogout">Cerrar sesión</button>
+  </aside>
+
+  <main class="admin-main">
+    <div class="admin-topbar">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button id="menuToggle" class="btn btn-ghost btn-sm">☰</button>
+        <h2 id="viewTitle">Dashboard</h2>
+      </div>
+      <a href="index.html" class="btn btn-ghost btn-sm">Ver sitio de clientes</a>
+    </div>
+    <div id="viewContent"></div>
+  </main>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="js/db.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
