@@ -634,7 +634,7 @@ function renderFormReserva({ id, prefill } = {}) {
     } catch (err) {
       btn.disabled = false;
       btn.textContent = 'Guardar';
-      if (err.message === 'DOBLE_RESERVA') alert('Ese horario y cancha ya estan ocupados.');
+      if (err.message === 'DOBLE_RESERVA') alert('Este horario ya está reservado. Por favor, elegí otro turno.');
       else { alert('Error al guardar la reserva.'); console.error(err); }
     }
   });
@@ -674,7 +674,7 @@ function renderFormBloqueo() {
       await Reservas.bloquear($('bFecha').value, $('bCancha').value, $('bHorario').value, $('bMotivo').value);
       terminarFormulario();
     } catch (err) {
-      if (err.message === 'DOBLE_RESERVA') alert('Ese horario ya esta ocupado o bloqueado.');
+      if (err.message === 'DOBLE_RESERVA') alert('Este horario ya está reservado. Por favor, elegí otro turno.');
       else { console.error(err); alert('No se pudo bloquear el horario.'); }
     }
   });

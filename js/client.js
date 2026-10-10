@@ -157,7 +157,7 @@ function renderResumen() {
   const btn = document.getElementById('btnConfirmar');
 
   if (!libre) {
-    box.innerHTML = `<div class="empty-state">Justo se reservo ese horario. Elegi otro, por favor.</div>`;
+    box.innerHTML = `<div class="empty-state">Este horario ya está reservado. Por favor, elegí otro turno.</div>`;
     btn.disabled = true;
     return;
   }
@@ -194,7 +194,7 @@ async function confirmarReserva() {
     mostrarCodigo(reserva);
   } catch (e) {
     if (e.message === 'DOBLE_RESERVA') {
-      alert('Justo se reservo ese horario. Por favor elegi otro.');
+      alert('Este horario ya está reservado. Por favor, elegí otro turno.');
       irAPaso(3);
     } else {
       alert('Ocurrio un error al confirmar la reserva. Revisa tu conexion e intenta de nuevo.');

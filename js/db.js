@@ -32,7 +32,8 @@ let _horarios = [];
 let _equipos = [];
 let _clientes = [];
 let _reservas = [];
-const _listo = { canchas: false, horarios: false, equipos: false, clientes: false, reservas: false };
+let _slots = [];
+const _listo = { canchas: false, horarios: false, equipos: false, clientes: false, reservas: false, slots: false };
 let _yaAvisoListo = false;
 
 function _avisarCambio() {
@@ -79,6 +80,7 @@ function iniciarSincronizacion() {
   _suscribir('equipos', _equipos, 'equipos');
   _suscribir('clientes', _clientes, 'clientes');
   _suscribir('reservas', _reservas, 'reservas');
+  _suscribir('slots', _slots, 'slots');
   seedIfEmpty().catch(e => console.error('Error creando datos iniciales', e));
 }
 
@@ -187,8 +189,15 @@ const Clientes = {
   }
 };
 
-/* ---------- Reservas ---------- */
+/* ---------- Reservas ----------
+   REGLA CLAVE: cada turno ocupado tiene un documento en "slots" cuyo ID es
+   fecha_cancha_horario. Firestore no deja crear dos documentos con el mismo ID,
+   y todas las escrituras de abajo se hacen en TRANSACCIONES: si dos personas
+   confirman el mismo turno a la vez, la base de datos acepta solo a una.
+   - Reserva activa (pendiente/confirmada/finalizada/bloqueada) => slot existe.
+   - Reserva cancelada => su slot se borra y el turno vuelve a estar libre.   */
 function _slotId(fecha, canchaId, horario) { return `${fecha}_${canchaId}_${horario}`; }
+function _slotRef(r) { return fdb.collection('slots').doc(_slotId(r.fecha, r.canchaId, r.horario)); }
 
 const Reservas = {
   all: () => _reservas,
@@ -199,80 +208,104 @@ const Reservas = {
     return _reservas.filter(r => r.fecha === fecha && r.canchaId === canchaId && r.estado !== 'cancelada');
   },
 
+  /** Disponible = no existe slot para esa fecha+cancha+horario (en tiempo real).
+   *  "ignorarId" sirve al editar una reserva: su propio turno no cuenta como ocupado. */
   estaDisponible(fecha, canchaId, horario, ignorarId) {
-    return !_reservas.some(r =>
-      r.id !== ignorarId && r.fecha === fecha && r.canchaId === canchaId &&
-      r.horario === horario && r.estado !== 'cancelada'
-    );
+    const id = _slotId(fecha, canchaId, horario);
+    return !_slots.some(s => s.id === id && s.reservaId !== ignorarId);
   },
 
   async crear(data) {
-    const slotRef = fdb.collection('slots').doc(_slotId(data.fecha, data.canchaId, data.horario));
+    if (!data.fecha || !data.canchaId || !data.horario) throw new Error('DATOS_INVALIDOS');
+    const estado = data.estado || 'pendiente';
+    if (estado === 'cancelada') throw new Error('DATOS_INVALIDOS');
+
+    const slotRef = _slotRef(data);
     const reservaRef = fdb.collection('reservas').doc();
-    const codigo = await nextReservaCodigo();
+    const contRef = fdb.collection('config').doc('contador');
+    let codigo = '';
 
-    const reserva = {
-      codigo,
-      fecha: data.fecha, horario: data.horario, canchaId: data.canchaId,
-      clienteNombre: data.clienteNombre, telefono: data.telefono || '',
-      equipoNombre: data.equipoNombre || '', jugadores: data.jugadores || null,
-      equiposCantidad: data.equiposCantidad || null, observaciones: data.observaciones || '',
-      estado: data.estado || 'pendiente', origen: data.origen || 'online',
-      pago: data.pago || { precio: null, sena: 0, saldo: null, totalPagado: 0, metodo: '', estadoPago: 'pendiente' },
-      createdAt: new Date().toISOString()
-    };
-
+    // Una sola transaccion: verificar turno libre + numerar + guardar. Si el turno ya
+    // esta ocupado no se gasta ningun numero de codigo.
     await fdb.runTransaction(async tx => {
       const slotSnap = await tx.get(slotRef);
+      const contSnap = await tx.get(contRef);
       if (slotSnap.exists) throw new Error('DOBLE_RESERVA');
+      const n = (contSnap.exists ? contSnap.data().valor : 100) + 1;
+      codigo = '#' + String(n).padStart(6, '0');
+      tx.set(contRef, { valor: n });
       tx.set(slotRef, { reservaId: reservaRef.id });
-      tx.set(reservaRef, reserva);
+      tx.set(reservaRef, {
+        codigo,
+        fecha: data.fecha, horario: data.horario, canchaId: data.canchaId,
+        clienteNombre: data.clienteNombre, telefono: data.telefono || '',
+        equipoNombre: data.equipoNombre || '', jugadores: data.jugadores || null,
+        equiposCantidad: data.equiposCantidad || null, observaciones: data.observaciones || '',
+        estado, origen: data.origen || 'online',
+        pago: data.pago || { precio: null, sena: 0, saldo: null, totalPagado: 0, metodo: '', estadoPago: 'pendiente' },
+        createdAt: new Date().toISOString()
+      });
     });
 
-    await Clientes.upsertFromReserva(reserva);
-    return { id: reservaRef.id, ...reserva };
+    const reserva = { id: reservaRef.id, codigo, ...data, estado, telefono: data.telefono || '' };
+    // Los bloqueos y las reservas sin telefono no generan "clientes"
+    if (estado !== 'bloqueado' && reserva.telefono) {
+      await Clientes.upsertFromReserva(reserva).catch(e => console.error('No se pudo guardar el cliente', e));
+    }
+    return reserva;
   },
 
+  /** Modifica una reserva (fecha, cancha, horario, estado, datos...) manteniendo
+   *  siempre la regla: un turno activo = un slot, y nunca dos reservas en el mismo turno. */
   async actualizar(id, cambios) {
     const actual = Reservas.get(id);
     if (!actual) return null;
-    const fecha = cambios.fecha ?? actual.fecha;
-    const canchaId = cambios.canchaId ?? actual.canchaId;
-    const horario = cambios.horario ?? actual.horario;
-    const cambiaSlot = fecha !== actual.fecha || canchaId !== actual.canchaId || horario !== actual.horario;
+    const nuevo = { ...actual, ...cambios };
+    const estabaActiva = actual.estado !== 'cancelada';
+    const quedaActiva = nuevo.estado !== 'cancelada';
+    const viejoRef = _slotRef(actual);
+    const nuevoRef = _slotRef(nuevo);
+    const mismoSlot = viejoRef.path === nuevoRef.path;
+    const reservaRef = fdb.collection('reservas').doc(id);
 
-    if (cambiaSlot) {
-      const nuevoSlotRef = fdb.collection('slots').doc(_slotId(fecha, canchaId, horario));
-      const viejoSlotRef = fdb.collection('slots').doc(_slotId(actual.fecha, actual.canchaId, actual.horario));
-      await fdb.runTransaction(async tx => {
-        const nuevoSnap = await tx.get(nuevoSlotRef);
-        if (nuevoSnap.exists) throw new Error('DOBLE_RESERVA');
-        tx.delete(viejoSlotRef);
-        tx.set(nuevoSlotRef, { reservaId: id });
-        tx.update(fdb.collection('reservas').doc(id), cambios);
-      });
-    } else {
-      await fdb.collection('reservas').doc(id).set(cambios, { merge: true });
-    }
-    return { ...actual, ...cambios };
+    await fdb.runTransaction(async tx => {
+      // (en Firestore todas las lecturas van antes que las escrituras)
+      const viejoSnap = estabaActiva ? await tx.get(viejoRef) : null;
+      const necesitaNuevo = quedaActiva && (!estabaActiva || !mismoSlot);
+      const nuevoSnap = necesitaNuevo ? await tx.get(nuevoRef) : null;
+
+      if (nuevoSnap && nuevoSnap.exists && nuevoSnap.data().reservaId !== id) throw new Error('DOBLE_RESERVA');
+
+      // Liberar el turno anterior (solo si el slot realmente es de esta reserva)
+      if (viejoSnap && viejoSnap.exists && viejoSnap.data().reservaId === id && (!quedaActiva || !mismoSlot)) {
+        tx.delete(viejoRef);
+      }
+      // Ocupar el turno nuevo (al mover la reserva o al reactivar una cancelada)
+      if (nuevoSnap && !nuevoSnap.exists) tx.set(nuevoRef, { reservaId: id });
+
+      tx.update(reservaRef, cambios);
+    });
+    return nuevo;
   },
 
+  /** Cancelar libera el turno automaticamente (ver actualizar). */
   async cancelar(id) {
     const r = Reservas.get(id);
-    if (!r) return;
-    const slotRef = fdb.collection('slots').doc(_slotId(r.fecha, r.canchaId, r.horario));
-    await fdb.runTransaction(async tx => {
-      tx.delete(slotRef);
-      tx.update(fdb.collection('reservas').doc(id), { estado: 'cancelada' });
-    });
+    if (!r || r.estado === 'cancelada') return;
+    return Reservas.actualizar(id, { estado: 'cancelada', canceladaEn: new Date().toISOString() });
   },
 
   async remove(id) {
     const r = Reservas.get(id);
-    if (r) {
-      await fdb.collection('slots').doc(_slotId(r.fecha, r.canchaId, r.horario)).delete().catch(() => {});
-    }
-    await fdb.collection('reservas').doc(id).delete();
+    const reservaRef = fdb.collection('reservas').doc(id);
+    if (!r) { await reservaRef.delete(); return; }
+    const ref = _slotRef(r);
+    await fdb.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      // Solo se libera el turno si era de esta reserva (nunca el de otra persona)
+      if (snap.exists && snap.data().reservaId === id) tx.delete(ref);
+      tx.delete(reservaRef);
+    });
   },
 
   async bloquear(fecha, canchaId, horario, motivo) {
